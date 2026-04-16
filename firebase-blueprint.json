@@ -1,0 +1,70 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Stores user profile information and settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "PortfolioItem": {
+      "title": "PortfolioItem",
+      "description": "A single stock holding in a user's portfolio.",
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "quantity": { "type": "number" },
+        "avgPrice": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["symbol", "quantity", "avgPrice"]
+    },
+    "PriceAlert": {
+      "title": "PriceAlert",
+      "description": "A user-defined price alert.",
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "price": { "type": "number" },
+        "type": { "type": "string", "enum": ["above", "below"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["symbol", "price", "type"]
+    },
+    "WatchlistItem": {
+      "title": "WatchlistItem",
+      "description": "A stock in the user's watchlist.",
+      "type": "object",
+      "properties": {
+        "symbol": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["symbol"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{uid}/portfolio/{symbol}": {
+      "schema": "PortfolioItem",
+      "description": "User's portfolio holdings"
+    },
+    "/users/{uid}/alerts/{alertId}": {
+      "schema": "PriceAlert",
+      "description": "User's price alerts"
+    },
+    "/users/{uid}/watchlist/{symbol}": {
+      "schema": "WatchlistItem",
+      "description": "User's watchlist"
+    }
+  }
+}

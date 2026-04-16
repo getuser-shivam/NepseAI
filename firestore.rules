@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Validate email format
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "theshivamsingh@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.uid is string &&
+             (data.displayName == null || data.displayName is string) &&
+             (data.photoURL == null || data.photoURL is string) &&
+             (!('role' in data) || data.role in ['admin', 'user']);
+    }
+
+    function isValidPortfolioItem(data) {
+      return data.keys().hasAll(['symbol', 'quantity', 'avgPrice']) &&
+             data.symbol is string && data.symbol.size() > 0 && data.symbol.size() < 10 &&
+             data.quantity is number && data.quantity > 0 &&
+             data.avgPrice is number && data.avgPrice >= 0;
+    }
+
+    function isValidPriceAlert(data) {
+      return data.keys().hasAll(['symbol', 'price', 'type']) &&
+             data.symbol is string &&
+             data.price is number && data.price >= 0 &&
+             data.type in ['above', 'below'];
+    }
+
+    function isValidWatchlistItem(data) {
+      return data.keys().hasAll(['symbol']) &&
+             data.symbol is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(uid) && isValidUserProfile(request.resource.data);
+
+      match /portfolio/{symbol} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid) && isValidPortfolioItem(request.resource.data);
+      }
+
+      match /alerts/{alertId} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid) && isValidPriceAlert(request.resource.data);
+      }
+
+      match /watchlist/{symbol} {
+        allow read: if isOwner(uid);
+        allow write: if isOwner(uid) && isValidWatchlistItem(request.resource.data);
+      }
+    }
+
+    match /settings/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
